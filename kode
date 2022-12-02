@@ -1,0 +1,83 @@
+import glob
+import nltk as nltk
+
+filer=(glob.glob("pdfmappe/*"))
+from nltk.tokenize import word_tokenize
+from PyPDF2 import PdfFileReader
+
+def extract_information(pdf_path):
+    with open(pdf_path, 'rb') as f:
+        pdf = PdfFileReader(f)
+        number_of_pages = pdf.getNumPages()
+        tokens=''
+        for i in range(0,number_of_pages):
+            if i <= (number_of_pages - 2):
+                tokens += pdf.getPage(i).extractText()
+        tokensListeText = word_tokenize(tokens.lower(), 'english')
+        #1: PRINT UT ALLE ORD FOR Å FINNE FEIL STAVELSER/OVERSETTELSER
+        #print(tokensListeText)
+        information = pdf.getDocumentInfo()
+        txt = f"""
+        Information about {pdf_path}:
+        Author: {information.author}
+        Subject: {information.subject}
+        Title: {information.title}
+        Number of pages: {number_of_pages}
+        SøkeOrd: {søkeOrd}
+        """
+        return(tokensListeText)
+
+def søkeOrd(ord,dictio):
+    totaltAntall=0
+    resultat = []
+    tilsammen = 0
+    document = 0
+    setning = ''
+
+    for k,v in dictio.items():
+        totaltAntall+=1
+        if(ord in v):
+            tilsammen+=v.count(ord)
+            document+=1
+            setninger = []
+            for i in v:
+                if '.' not in i:
+                    setning+=i+' '
+                if '.' in i:
+                    if(len(i)>1):
+                        setning+=i[:-1]
+                    if(ord in setning):
+                        #print(setning)
+                        setninger.append(setning)
+                    setning=''
+            resultat.append((k,v.count(ord),setninger))
+
+    print(f'søkeord: {ord}\n\nOrdet {ord} er nevnt til sammen: {tilsammen} ganger')
+    print('\n\n\n')
+    print('Rettsavgjørelser gjennomgått ', totaltAntall)
+    print('Antall rettsavg med søkeord:', document)
+    print(f'OVERSIKT OVER DOKUMENTER:\n\n ')
+
+    for i,v,l in resultat:
+        print(f'DOM: {i}\nSøkeord: {ord.title()}nevnes {v} ganger \nKontekst: {l}\n')
+        print(f'FILNAVN: {i}\nSøkeordet - {ord.title()} - nevnes {v} ganger \nKontekst: {l}\n')
+
+if __name__ == '__main__':
+    while ord !='slutt':
+        alleFiler = {}
+        for y in filer:
+            alleFiler[y] = extract_information(y)
+        #FIKSE ORDELINGER (BARE KOPIER DENNE KODEN UNDER OG SKRIV INN NYTT ORD
+        for k,v in alleFiler.items():
+            if 'alternative' in v:
+                posisjonDelete = []
+                for i in range(len(v)):
+                    if(v[i] == 'alternative' and v[i+1]== 'r'):
+                        posisjonDelete.append(i)
+                for i in posisjonDelete:
+                    v[i] += v[i+1]
+                    v.pop(i+1)
+            #ERSTATT ORD
+            for i in v:
+                if '$' in i:
+                    i.replace('$','§')
